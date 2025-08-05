@@ -22,14 +22,14 @@ const (
 	numObjects     = 2
 	numStrikes     = 100
 	strikeRadiusKm = 15
-	groupSpeed     = 1.0 // км/шаг
+	groupSpeed     = 1.0
 
 	updateInterval  = time.Second
 	alertResetDelay = 30 * time.Second
 	newGroupDelay   = 3 * time.Second
 )
 
-var zones = []float64{50, 40, 25, 15, 10, 5} // km
+var zones = []float64{60, 40, 25, 15, 10, 5}
 
 type UserObject struct {
 	ID        uuid.UUID
