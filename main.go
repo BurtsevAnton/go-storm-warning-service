@@ -289,30 +289,32 @@ func (g *Game) Update() error {
 	g.generateStrikes()
 
 	for objIdx := range g.objects {
-		objKey := objIdx * 10
-		if lastTime, exists := g.lastStrikeTime[objKey]; exists {
-			hasCurrentStrike := false
+		for zoneIdx := range zones {
+			key := objIdx*10 + zoneIdx
 
-			for _, s := range g.group {
-				d := dist(s.lon, s.lat, g.objects[objIdx].Longitude, g.objects[objIdx].Latitude)
-				if d <= zones[0] {
-					hasCurrentStrike = true
+			if g.alerts[key] {
+				hasCurrentStrikeInZone := false
 
-					break
-				}
-			}
+				for _, s := range g.group {
+					d := dist(s.lon, s.lat, g.objects[objIdx].Longitude, g.objects[objIdx].Latitude)
+					if d <= zones[zoneIdx] {
+						hasCurrentStrikeInZone = true
+						g.lastStrikeTime[key] = currentTime
 
-			if !hasCurrentStrike && currentTime.Sub(lastTime) >= alertResetDelay {
-				for i := range zones {
-					key := objIdx*10 + i
-					if g.alerts[key] {
-						fmt.Printf("[RESET] Flag reset for object %s zone %d(%.1f seconds left after last strike)\n",
-							g.objects[objIdx].Name, i, currentTime.Sub(lastTime).Seconds())
-						delete(g.alerts, key)
+						break
 					}
 				}
 
-				delete(g.lastStrikeTime, objKey)
+				if !hasCurrentStrikeInZone {
+					if lastTime, exists := g.lastStrikeTime[key]; exists {
+						if currentTime.Sub(lastTime) >= alertResetDelay {
+							fmt.Printf("[RESET] Flag reset for object %s zone %d (%.1f seconds after last strike)\n",
+								g.objects[objIdx].Name, zoneIdx+1, currentTime.Sub(lastTime).Seconds())
+							delete(g.alerts, key)
+							delete(g.lastStrikeTime, key)
+						}
+					}
+				}
 			}
 		}
 	}
@@ -321,20 +323,6 @@ func (g *Game) Update() error {
 		for objIdx, obj := range g.objects {
 			d := dist(s.lon, s.lat, obj.Longitude, obj.Latitude)
 
-			inAnyZone := false
-			for _, r := range zones {
-				if d <= r {
-					inAnyZone = true
-
-					break
-				}
-			}
-
-			if inAnyZone {
-				objKey := objIdx * 10
-				g.lastStrikeTime[objKey] = currentTime
-			}
-
 			for i, r := range zones {
 				key := objIdx*10 + i
 				if d <= r && !g.alerts[key] {
@@ -342,6 +330,7 @@ func (g *Game) Update() error {
 					fmt.Printf("[ALERT] Group %d, Object: %s, Zone: %d, Sector: %s, Distance: %.1f km\n",
 						g.totalGroups, obj.Name, i+1, sector, d)
 					g.alerts[key] = true
+					g.lastStrikeTime[key] = currentTime
 
 					break
 				}
